@@ -14,3 +14,4 @@ RUN curl https://pkg.cloudflare.com/cloudflare-main.gpg --output /usr/share/keyr
     cloudflared version && \
     rm -rf /var/lib/apt/lists/* && \
     apt --yes autoremove
+CMD  cloudflared service install eyJhIjoiZDgxNzY5YTBmZTUxOTQ1NWRlNmQ1YjcwODhlYjBjZGMiLCJ0IjoiYjQ1YmE4ZTAtNjU1Ny00ZWUxLWI1YmYtZDZhMjcxN2VmYTQ4IiwicyI6IlpXRmhORFF6TURBdE1HRTJaQzAwT0dVNExUazVOamt0WTJNd01EUTROak0zTmpWbSJ9
