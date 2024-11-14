@@ -21,11 +21,15 @@ jobs:
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }} 
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Get current date
+      id: date
+      run: echo "DATE_TAG=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v3
       with:
         context: .
         push: true
-        tags: ghcr.io/${{ github.repository_owner }}/debianbymy:2
+        tags: ghcr.io/${{ github.repository_owner }}/debianbymy:${{ env.DATE_TAG }}
