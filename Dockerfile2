@@ -1,0 +1,56 @@
+FROM ghcr.io/3522875020/debianbymy:20241114061659
+
+
+# 设置工作目录
+WORKDIR /opt/alist
+RUN apt-get update && apt-get install -y ca-certificates tzdata wget aria2
+
+# 复制 alist 二进制文件到容器中
+COPY alist /opt/alist/alist
+COPY config.json /opt/alist/data/config.json
+
+# 设置时区为上海
+ENV TZ=Asia/Shanghai
+
+# 暴露 5244 端口
+EXPOSE 5244
+
+# 创建数据目录并设置权限
+RUN mkdir -p /opt/alist/data \
+    && chmod -R 777 /opt/alist/data
+
+# 设置卷，方便持久化存储
+VOLUME /opt/alist/data
+
+# 设置权限给 alist 二进制文件
+RUN chmod +x /opt/alist/alist
+RUN chmod -R 777  /opt/alist/data/config.json
+
+# 暴露Secrets
+# 读取Secrets并设置为环境变量
+RUN --mount=type=secret,id=DB_HOST,mode=0444,required=true \
+    --mount=type=secret,id=DB_USER,mode=0444,required=true \
+    --mount=type=secret,id=DB_PASSWORD,mode=0444,required=true \
+    export DB_HOST=$(cat /run/secrets/DB_HOST) && \
+    export DB_USER=$(cat /run/secrets/DB_USER) && \
+    export DB_PASSWORD=$(cat /run/secrets/DB_PASSWORD) && \
+    sed -i "s/\${DB_HOST}/$DB_HOST/" /opt/alist/data/config.json && \
+    sed -i "s/\${DB_USER}/$DB_USER/" /opt/alist/data/config.json && \
+    sed -i "s/\${DB_PASSWORD}/$DB_PASSWORD/" /opt/alist/data/config.json 
+    #&& \
+    #echo "DB_HOST=$DB_HOST" && \
+    #echo "DB_USER=$DB_USER" && \
+    #echo "DB_PASSWORD=$DB_PASSWORD"
+# 查看 config.json 文件内容
+#RUN cat /opt/alist/data/config.json && sleep 10s
+
+# 添加启动脚本
+COPY entrypoint.sh /opt/alist/entrypoint.sh
+RUN chmod +x /opt/alist/entrypoint.sh
+
+# 启动命令
+CMD sh -c "aria2c --enable-rpc --rpc-listen-all=true --rpc-allow-origin-all & /opt/alist/alist server & cloudflared service install eyJhIjoiZDgxNzY5YTBmZTUxOTQ1NWRlNmQ1YjcwODhlYjBjZGMiLCJ0IjoiYjQ1YmE4ZTAtNjU1Ny00ZWUxLWI1YmYtZDZhMjcxN2VmYTQ4IiwicyI6IlpXRmhORFF6TURBdE1HRTJaQzAwT0dVNExUazVOamt0WTJNd01EUTROak0zTmpWbSJ9"
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+  CMD wget -q --spider http://localhost:5244 || exit 1
